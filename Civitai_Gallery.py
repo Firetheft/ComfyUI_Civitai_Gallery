@@ -30,7 +30,7 @@ class CivitaiGalleryNode:
     RETURN_NAMES = ("positive_prompt", "negative_prompt", "image", "info",)
     
     FUNCTION = "get_selected_data"
-    CATEGORY = "Civitai"
+    CATEGORY = "📜Asset Gallery/Civitai"
 
     def get_selected_data(self):
         item_data = {}
