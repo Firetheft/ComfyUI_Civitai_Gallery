@@ -3,7 +3,6 @@ from aiohttp import web
 import aiohttp
 import os
 import json
-import random
 import torch
 import numpy as np
 from PIL import Image
@@ -12,19 +11,33 @@ import urllib.request
 import time
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROMPT_FILE = os.path.join(NODE_DIR, "selected_prompt.json")
+SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
+
+def load_selections():
+    if not os.path.exists(SELECTIONS_FILE): return {}
+    try:
+        with open(SELECTIONS_FILE, 'r', encoding='utf-8') as f: return json.load(f)
+    except: return {}
+
+def save_selections(data):
+    try:
+        with open(SELECTIONS_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e: print(f"CivitaiGallery: Error saving selections: {e}")
+
 
 class CivitaiGalleryNode:
     @classmethod
     def IS_CHANGED(cls, **kwargs):
-        if os.path.exists(PROMPT_FILE):
-            return os.path.getmtime(PROMPT_FILE)
-        else:
-            return 0.0
+        if os.path.exists(SELECTIONS_FILE):
+            return os.path.getmtime(SELECTIONS_FILE)
+        return float("inf")
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {}}
+        return {
+            "required": {},
+            "hidden": { "unique_id": "UNIQUE_ID" },
+        }
 
     RETURN_TYPES = ("STRING", "STRING", "IMAGE", "STRING",)
     RETURN_NAMES = ("positive_prompt", "negative_prompt", "image", "info",)
@@ -32,20 +45,14 @@ class CivitaiGalleryNode:
     FUNCTION = "get_selected_data"
     CATEGORY = "📜Asset Gallery/Civitai"
 
-    def get_selected_data(self):
-        item_data = {}
-        should_download = False
-        
-        try:
-            with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
-                full_data = json.load(f)
-                item_data = full_data.get("item", {})
-                should_download = full_data.get("download_image", False)
-        except (FileNotFoundError, json.JSONDecodeError):
-            if not os.path.exists(PROMPT_FILE):
-                with open(PROMPT_FILE, 'w', encoding='utf-8') as f:
-                    json.dump({"item": {}, "download_image": False}, f)
+    def get_selected_data(self, unique_id):
+        selections = load_selections()
 
+        node_selection = selections.get(str(unique_id), {})
+
+        item_data = node_selection.get("item", {})
+        should_download = node_selection.get("download_image", False)
+        
         meta = item_data.get("meta", {}) if item_data else {}
         pos_prompt = meta.get("prompt", "") if meta else ""
         neg_prompt = meta.get("negativePrompt", "") if meta else ""
@@ -80,18 +87,28 @@ class CivitaiGalleryNode:
 
         return (pos_prompt, neg_prompt, tensor, info_string,)
 
+prompt_server = server.PromptServer.instance
 
-@server.PromptServer.instance.routes.post("/civitai_gallery/set_prompts")
+@prompt_server.routes.post("/civitai_gallery/set_prompts")
 async def set_civitai_prompts(request):
     try:
         data = await request.json()
-        with open(PROMPT_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
-        return web.json_response({"status": "ok", "message": "Data saved"})
+        node_id = str(data.get("node_id"))
+        if not node_id:
+            return web.json_response({"status": "error", "message": "Missing node_id"}, status=400)
+
+        selections = load_selections()
+
+        selections[node_id] = {
+            "item": data.get("item"),
+            "download_image": data.get("download_image")
+        }
+        save_selections(selections)
+        return web.json_response({"status": "ok", "message": "Selection saved"})
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
-@server.PromptServer.instance.routes.get("/civitai_gallery/images")
+@prompt_server.routes.get("/civitai_gallery/images")
 async def get_civitai_images(request):
     nsfw = request.query.get('nsfw', 'None')
     sort = request.query.get('sort', 'Most Reactions')
