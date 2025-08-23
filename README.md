@@ -23,6 +23,10 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
   - **Intelligent Image Loading**: The original image is only downloaded if its `image` output is connected to another node, saving bandwidth and time.
   - **Stable Waterfall Layout**: A fluid, responsive masonry layout that keeps existing images in place when new ones are loaded via infinite scroll.
   - **Custom UI**: Features a custom-styled, permanently visible scrollbar for easy navigation.
+  - **Advanced Lightbox Viewer**:
+      - Double-click any image to open a full-screen, centered preview.
+      - **Image Viewer**: Supports zooming (mouse wheel) and panning (drag).
+      - **Gallery Navigation**: Use on-screen arrows or keyboard arrow keys (`Left`/`Right`) to cycle through all image.
 
 ## How to Use
 
@@ -66,6 +70,10 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
   - **智能图片加载**：只有当 `image` 输出端口连接到其他节点时，插件才会下载原始图片，从而节省您的时间和带宽。
   - **稳定瀑布流布局**：一个流畅的、响应式的瀑布流布局，当通过无限滚动加载新图片时，已加载的图片会保持在原位不动。
   - **自定义界面**：拥有一个自定义样式的、永久可见的滚动条，方便您进行导航。
+  - **高级灯箱预览器**:
+      - 双击任意图片即可打开一个全局居中的全屏预览器。
+      - **图片查看器**: 支持使用鼠标滚轮进行**缩放**，并通过拖动进行**平移**。
+      - **图库导航**: 使用界面上的箭头或键盘方向键（`左`/`右`）轻松切换浏览图片。
 
 ## 使用方法
 
