@@ -12,6 +12,8 @@ import time
 import folder_paths
 import asyncio
 
+download_tasks = {}
+
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
 UI_STATE_FILE = os.path.join(NODE_DIR, "civitai_ui_state.json")
@@ -253,37 +255,37 @@ async def get_favorites_images(request):
 
     response_data = { "items": items, "metadata": {} }
     return web.json_response(response_data)
-    
+
 @prompt_server.routes.post("/civitai_gallery/download_model")
 async def download_model(request):
     try:
         config = load_config()
         api_key = config.get("civitai_api_key")
         if not api_key:
-            return web.json_response({"status": "error", "message": "Civitai API Key not found in config.json.", "reason": "API_KEY_MISSING"}, status=401)
-        
+            return web.json_response({"status": "error", "message": "Civitai API Key not found.", "reason": "API_KEY_MISSING"}, status=401)
+
         headers = { "Authorization": f"Bearer {api_key}" }
         data = await request.json()
         model_version_id = data.get("version_id")
         model_type = data.get("type", "").lower()
+
         if not model_version_id:
             return web.json_response({"status": "error", "message": "Missing model_version_id"}, status=400)
-        
+
         version_info_url = f"https://civitai.com/api/v1/model-versions/{model_version_id}"
         async with aiohttp.ClientSession() as session:
             async with session.get(version_info_url, headers=headers) as response:
                 if response.status != 200:
-                    return web.json_response({"status": "error", "message": f"Failed to fetch model version info from Civitai. Status: {response.status}"}, status=500)
+                    return web.json_response({"status": "error", "message": f"Failed to fetch model version info. Status: {response.status}"}, status=500)
                 version_data = await response.json()
-        
-        if not version_data or not version_data.get("files"):
-            return web.json_response({"status": "error", "message": "No files found in model version info"}, status=404)
 
         model_file = version_data.get("files", [])[0]
         download_url = model_file.get("downloadUrl")
         filename = model_file.get("name")
+        total_size = model_file.get("sizeKB", 0) * 1024
+
         if not download_url or not filename:
-             return web.json_response({"status": "error", "message": "Could not find a valid file or download URL in the model version info."}, status=404)
+             return web.json_response({"status": "error", "message": "Could not find a valid download URL."}, status=404)
 
         type_mapping = {
             "checkpoint": "checkpoints", "lora": "loras", "locon": "loras", "dora": "loras",
@@ -293,54 +295,70 @@ async def download_model(request):
         }
         custom_folder_types = ["workflows", "wildcards", "poses", "detection"]
         primary_folder_path = None
-
         save_folder_key = type_mapping.get(model_type)
-
         if save_folder_key:
             primary_folder_path = folder_paths.get_folder_paths(save_folder_key)[0]
-            if not os.path.exists(primary_folder_path): os.makedirs(primary_folder_path)
-            existing_files = get_full_filename_list(save_folder_key)
-            if filename in existing_files:
+            if filename in get_full_filename_list(save_folder_key):
                 return web.json_response({"status": "already_exists", "message": f"File already exists: {filename}"})
-        
         elif model_type in custom_folder_types:
             models_dir = os.path.dirname(folder_paths.get_folder_paths('checkpoints')[0])
-            target_dir_name = model_type.capitalize()
-            primary_folder_path = os.path.join(models_dir, target_dir_name)
-            
-            if not os.path.exists(primary_folder_path):
-                os.makedirs(primary_folder_path)
-            
+            primary_folder_path = os.path.join(models_dir, model_type.capitalize())
             if os.path.exists(os.path.join(primary_folder_path, filename)):
                  return web.json_response({"status": "already_exists", "message": f"File already exists: {filename}"})
-        
         elif model_type == "motionmodule":
-            motion_module_path = os.path.join(folder_paths.get_folder_paths("custom_nodes")[0], "ComfyUI-AnimateDiff-Evolved", "models")
-            if not os.path.exists(motion_module_path): os.makedirs(motion_module_path)
-            if filename in os.listdir(motion_module_path):
+            primary_folder_path = os.path.join(folder_paths.get_folder_paths("custom_nodes")[0], "ComfyUI-AnimateDiff-Evolved", "models")
+            if filename in os.listdir(primary_folder_path):
                 return web.json_response({"status": "already_exists", "message": f"File already exists: {filename}"})
-            primary_folder_path = motion_module_path
-
         else:
-            return web.json_response({"status": "error", "message": f"Unknown or unsupported model type for download: {model_type}"}, status=400)
-        
+            return web.json_response({"status": "error", "message": f"Unknown model type: {model_type}"}, status=400)
+
+        if not os.path.exists(primary_folder_path):
+            os.makedirs(primary_folder_path)
+
         file_path = os.path.join(primary_folder_path, filename)
-        
-        print(f"CivitaiGallery: Starting download of '{filename}' from {download_url}")
-        async with aiohttp.ClientSession() as session:
-            async with session.get(download_url, headers=headers) as response:
-                if response.status != 200:
-                    return web.json_response({"status": "error", "message": f"Download failed. Status: {response.status}. Check your API Key."}, status=response.status)
-                with open(file_path, 'wb') as f:
-                    while True:
-                        chunk = await response.content.read(8192)
-                        if not chunk: break
-                        f.write(chunk)
-        
-        print(f"CivitaiGallery: Successfully downloaded '{filename}' to '{primary_folder_path}'")
-        return web.json_response({"status": "success", "message": "Download complete."})
+
+        task_id = f"download_{model_version_id}_{int(time.time())}"
+
+        async def do_download():
+            download_tasks[task_id] = {"progress": 0, "total_size": total_size, "status": "downloading", "cancel_requested": False}
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(download_url, headers=headers, timeout=None) as response:
+                        if response.status != 200:
+                            raise Exception(f"Download failed with status: {response.status}")
+
+                        with open(file_path, 'wb') as f:
+                            downloaded = 0
+                            while True:
+                                if download_tasks.get(task_id, {}).get("cancel_requested"):
+                                    raise Exception("Download cancelled by user.")
+
+                                chunk = await response.content.read(8192)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                download_tasks[task_id]["progress"] = downloaded
+
+                        download_tasks[task_id]["status"] = "completed"
+                        print(f"CivitaiGallery: Successfully downloaded '{filename}'")
+
+            except Exception as e:
+                print(f"CivitaiGallery: Error during download for task {task_id}: {e}")
+                if download_tasks.get(task_id):
+                    if "cancelled" in str(e).lower():
+                        download_tasks[task_id]["status"] = "cancelled"
+                    else:
+                        download_tasks[task_id]["status"] = "error"
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+        asyncio.create_task(do_download())
+
+        return web.json_response({"status": "starting", "task_id": task_id})
+
     except Exception as e:
-        print(f"CivitaiGallery: Error in download_model: {e}")
+        print(f"CivitaiGallery: Error in download_model setup: {e}")
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 @prompt_server.routes.post("/civitai_gallery/get_resource_info")
@@ -348,7 +366,7 @@ async def get_resource_info(request):
     try:
         data = await request.json()
         resources = data.get("resources", [])
-        
+
         type_mapping = {
             "checkpoint": "checkpoints", "lora": "loras", "locon": "loras", "dora": "loras",
             "lycoris": "loras", "textualinversion": "embeddings", "hypernetwork": "hypernetworks",
@@ -356,7 +374,7 @@ async def get_resource_info(request):
             "vae": "vae", "upscaler": "upscale_models",
         }
         custom_folder_types = ["workflows", "wildcards", "poses", "detection"]
-        
+
         async def fetch_info(session, resource):
             version_id = resource.get("modelVersionId")
             if version_id:
@@ -469,6 +487,37 @@ async def get_all_favorite_tags(request):
         
         sorted_tags = sorted(list(all_tags), key=lambda s: s.lower())
         return web.json_response({"tags": sorted_tags})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)}, status=500)
+
+@prompt_server.routes.get("/civitai_gallery/download_progress")
+async def get_download_progress(request):
+    task_id = request.query.get('task_id')
+    if not task_id or task_id not in download_tasks:
+        return web.json_response({"status": "not_found"}, status=404)
+    
+    task = download_tasks[task_id]
+
+    if task["status"] in ["completed", "error", "cancelled"]:
+        async def cleanup():
+            await asyncio.sleep(5)
+            if task_id in download_tasks:
+                del download_tasks[task_id]
+        asyncio.create_task(cleanup())
+        
+    return web.json_response(task)
+
+@prompt_server.routes.post("/civitai_gallery/cancel_download")
+async def cancel_download(request):
+    try:
+        data = await request.json()
+        task_id = data.get("task_id")
+        if task_id and task_id in download_tasks:
+            download_tasks[task_id]["cancel_requested"] = True
+            download_tasks[task_id]["status"] = "cancelling"
+            print(f"CivitaiGallery: Cancellation requested for task {task_id}")
+            return web.json_response({"status": "cancellation_requested"})
+        return web.json_response({"status": "task_not_found"}, status=404)
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
