@@ -5,6 +5,15 @@
 
 </div>
 
+### Changelog (2025-09-05)
+* **New Node**: Civitai Models Gallery: Added a completely new Civitai Models Gallery node. It allows you to browse, filter, and download models (Checkpoints, LoRAs, VAEs, etc.) directly from Civitai within ComfyUI.
+
+* **Model & Resource Downloader**: Implemented a downloader for all resource types. Simply click the "Download" button in the new "Resources Used" viewer or the Models Gallery to save files to the correct folders. This requires a one-time setup of your Civitai API key.
+
+* **Advanced Favorites & Tagging**: The favorites system has been overhauled. You can now add custom tags to your favorite images for better organization.
+
+* **Enhanced UI & Workflow Memory**: The node now saves all your UI settings (filters, selections, sorting) within your workflow, restoring them automatically on reload.
+
 ## Overview
 
 **ComfyUI Civitai Gallery** is a powerful custom node for ComfyUI that integrates a seamless image browser for the Civitai website directly into your workflow. This node allows you to browse, search, and select images from Civitai and instantly import their prompts, negative prompts, and full-resolution images into your workflow. It is designed to significantly speed up your creative process by eliminating the need to switch between your browser and ComfyUI.
@@ -23,6 +32,10 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
   - **Intelligent Image Loading**: The original image is only downloaded if its `image` output is connected to another node, saving bandwidth and time.
   - **Stable Waterfall Layout**: A fluid, responsive masonry layout that keeps existing images in place when new ones are loaded via infinite scroll.
   - **Custom UI**: Features a custom-styled, permanently visible scrollbar for easy navigation.
+  - **Advanced Lightbox Viewer**:
+      - Double-click any image to open a full-screen, centered preview.
+      - **Image Viewer**: Supports zooming (mouse wheel) and panning (drag).
+      - **Gallery Navigation**: Use on-screen arrows or keyboard arrow keys (`Left`/`Right`) to cycle through all image.
 
 ## How to Use
 
@@ -47,7 +60,14 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
 4.  Restart ComfyUI.
 
 -----
+### 更新日志 (2025-09-05)
+* **新节点**：Civitai 模型库：添加了一个全新的 Civitai 模型库节点。它允许您在 ComfyUI 中直接从 Civitai 浏览、筛选和下载模型（检查点、LoRA、VAE 等）。
 
+* **模型和资源下载器**：已实现适用于所有资源类型的下载器。只需点击新的“已使用资源”查看器或模型库中的“下载”按钮，即可将文件保存到正确的文件夹。这需要一次性设置您的 Civitai API 密钥。
+
+* **高级收藏夹和标签**：收藏夹系统已全面改进。您现在可以为收藏的图像添加自定义标签，以便更好地进行整理。
+
+* **增强的 UI 和工作流内存**：该节点现在会保存您工作流中的所有 UI 设置（过滤器、选择、排序），并在重新加载时自动恢复。
 ## 概述
 
 **ComfyUI Civitai Gallery** 是一个功能强大的 ComfyUI 自定义节点，它将一个为 Civitai 网站打造的无缝图片浏览器直接集成到了您的工作流中。该节点允许您直接浏览、搜索和选择来自 Civitai 的图片，并能一键将其提示词、负向提示词和原始高分辨率图片导入到您的工作流中。它旨在通过消除在浏览器和 ComfyUI 之间来回切换的需要，从而极大地加速您的创作流程。
@@ -66,6 +86,10 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
   - **智能图片加载**：只有当 `image` 输出端口连接到其他节点时，插件才会下载原始图片，从而节省您的时间和带宽。
   - **稳定瀑布流布局**：一个流畅的、响应式的瀑布流布局，当通过无限滚动加载新图片时，已加载的图片会保持在原位不动。
   - **自定义界面**：拥有一个自定义样式的、永久可见的滚动条，方便您进行导航。
+  - **高级灯箱预览器**:
+      - 双击任意图片即可打开一个全局居中的全屏预览器。
+      - **图片查看器**: 支持使用鼠标滚轮进行**缩放**，并通过拖动进行**平移**。
+      - **图库导航**: 使用界面上的箭头或键盘方向键（`左`/`右`）轻松切换浏览图片。
 
 ## 使用方法
 
