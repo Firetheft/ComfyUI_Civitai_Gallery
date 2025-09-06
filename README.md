@@ -5,6 +5,15 @@
 
 </div>
 
+### Changelog (2025-09-06)
+* **One-Click Workflow Loading**: Image cards in the gallery that contain ComfyUI workflow metadata will now persistently display a "Load Workflow" icon (🎁).
+Clicking this icon instantly loads the entire workflow into your current workspace, just like dropping a workflow file.
+Enhanced the stability of data parsing to compatibly handle and auto-fix malformed JSON data (e.g., containing undefined or NaN values) from various sources, improving the success rate of loading.
+
+* **Linkage Between Model and Image Galleries**: In the "Civitai Models Gallery" node's model version selection window, a "🖼️ View Images" button has been added for each model version.
+Clicking this button will now cause the "Civitai Images Gallery" to load and display images exclusively from that specific model version.
+When in linked mode, the Image Gallery will show a clear notification bar indicating the current model and version being viewed, with an option to "Clear Filter" and return to normal browsing.
+
 ### Changelog (2025-09-05)
 * **New Node**: Civitai Models Gallery: Added a completely new Civitai Models Gallery node. It allows you to browse, filter, and download models (Checkpoints, LoRAs, VAEs, etc.) directly from Civitai within ComfyUI.
 
@@ -60,6 +69,15 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
 4.  Restart ComfyUI.
 
 -----
+### 更新日志 (2025-09-06)
+* **一键加载工作流**：图库中包含 ComfyUI 工作流元数据的图片卡现在将持续显示“加载工作流”图标 (🎁)。
+点击此图标即可立即将整个工作流加载到当前工作区，就像拖放工作流文件一样。
+增强了数据解析的稳定性，以便兼容处理并自动修复来自各种来源的格式错误的 JSON 数据（例如，包含未定义值或 NaN 值），从而提高加载的成功率。
+
+* **模型库与图片库之间的关联**：在“Civitai 模型库”节点的模型版本选择窗口中，每个模型版本都添加了一个“🖼️ 查看图片”按钮。
+点击此按钮后，“Civitai 图片库”将加载并仅显示该特定模型版本的图片。
+在关联模式下，图片库将显示一个清晰的通知栏，指示当前正在查看的模型和版本，并可选择“清除筛选条件”返回正常浏览。
+
 ### 更新日志 (2025-09-05)
 * **新节点**：Civitai 模型库：添加了一个全新的 Civitai 模型库节点。它允许您在 ComfyUI 中直接从 Civitai 浏览、筛选和下载模型（检查点、LoRA、VAE 等）。
 

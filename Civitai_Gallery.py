@@ -161,11 +161,44 @@ async def get_civitai_images(request):
     international_version = request.query.get('international_version', 'false').lower() in ['true', '1']
     cursor = request.query.get('cursor', None)
     tags_query = request.query.get('tags', None)
+    model_id = request.query.get('modelId', None)
+    model_version_id = request.query.get('modelVersionId', None)
+    
     base_domain = "civitai.com" if international_version else "civitai.work"
     api_url = f"https://{base_domain}/api/v1/images"
-    params = {'limit': 50, 'nsfw': nsfw, 'sort': sort, 'period': period, 'username': username}
-    if cursor: params['cursor'] = cursor
-    if tags_query: params['tags'] = tags_query
+    
+    params = {}
+
+    if model_version_id:
+        params = {
+            'modelVersionId': model_version_id,
+            'limit': 50,
+            'sort': sort,
+            'period': period,
+            'nsfw': nsfw
+        }
+    elif model_id:
+        params = {
+            'modelId': model_id,
+            'limit': 50,
+            'sort': sort,
+            'period': period,
+            'nsfw': nsfw
+        }
+    else:
+        params = {
+            'limit': 50, 
+            'nsfw': nsfw, 
+            'sort': sort, 
+            'period': period, 
+            'username': username
+        }
+        if tags_query: 
+            params['tags'] = tags_query
+
+    if cursor:
+        params['cursor'] = cursor
+        
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url, params=params) as response:
