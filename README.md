@@ -5,6 +5,9 @@
 
 </div>
 
+### Changelog (2025-09-07)
+* **🎬 Video Preview Support**: The Civitai Images Gallery now supports video browsing. You can toggle the “Show Video” checkbox to control whether video cards are displayed. To prevent potential crashes caused by autoplay in the ComfyUI interface, look for a play icon (▶️) in the top-right corner of each gallery card. If the icon is present, you can hover to preview the video or double-click the card (or click the play icon) to watch it in its original resolution.
+
 ### Changelog (2025-09-06)
 * **One-Click Workflow Loading**: Image cards in the gallery that contain ComfyUI workflow metadata will now persistently display a "Load Workflow" icon (🎁).
 Clicking this icon instantly loads the entire workflow into your current workspace, just like dropping a workflow file.
@@ -69,6 +72,9 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
 4.  Restart ComfyUI.
 
 -----
+### 更新日志 (2025-09-07)
+* **🎬 视频预览支持**：Civitai 图片库现已支持视频浏览。您可以勾选“显示视频”复选框来控制是否显示视频卡。为防止 ComfyUI 界面中自动播放可能导致的崩溃，请在每个图库卡片的右上角找到播放图标 (▶️)。如果出现该图标，您可以将鼠标悬停在卡片上预览视频，或者双击卡片（或点击播放图标）以原始分辨率观看。
+
 ### 更新日志 (2025-09-06)
 * **一键加载工作流**：图库中包含 ComfyUI 工作流元数据的图片卡现在将持续显示“加载工作流”图标 (🎁)。
 点击此图标即可立即将整个工作流加载到当前工作区，就像拖放工作流文件一样。
