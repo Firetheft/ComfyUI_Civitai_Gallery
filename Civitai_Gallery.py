@@ -15,7 +15,6 @@ import asyncio
 download_tasks = {}
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
-SELECTIONS_FILE = os.path.join(NODE_DIR, "selections.json")
 UI_STATE_FILE = os.path.join(NODE_DIR, "civitai_ui_state.json")
 FAVORITES_FILE = os.path.join(NODE_DIR, "civitai_favorites.json")
 CONFIG_FILE = os.path.join(NODE_DIR, "config.json")
@@ -30,17 +29,6 @@ def save_config(data):
     try:
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"CivitaiGallery: Error saving config: {e}")
-
-def load_selections():
-    if not os.path.exists(SELECTIONS_FILE): return {}
-    try:
-        with open(SELECTIONS_FILE, 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-def save_selections(data):
-    try:
-        with open(SELECTIONS_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e: print(f"CivitaiGallery: Error saving selections: {e}")
 
 def load_ui_state():
     if not os.path.exists(UI_STATE_FILE): return {}
@@ -75,26 +63,30 @@ def get_full_filename_list(folder_key):
 
 class CivitaiGalleryNode:
     @classmethod
-    def IS_CHANGED(cls, **kwargs):
-        if os.path.exists(SELECTIONS_FILE):
-            return os.path.getmtime(SELECTIONS_FILE)
-        return float("inf")
+    def IS_CHANGED(cls, selection_data, **kwargs):
+        return selection_data
 
     @classmethod
     def INPUT_TYPES(cls):
-        return { "required": {}, "hidden": { "unique_id": "UNIQUE_ID", "civitai_gallery_unique_id_widget": ("STRING", {"default": "", "multiline": False}), }, }
+        return {
+            "required": {},
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "selection_data": ("STRING", {"default": "{}", "multiline": True, "forceInput": True}),
+                "civitai_gallery_unique_id_widget": ("STRING", {"default": "", "multiline": False}),
+            },
+        }
 
     RETURN_TYPES = ("STRING", "STRING", "IMAGE", "STRING",)
     RETURN_NAMES = ("positive_prompt", "negative_prompt", "image", "info",)
     FUNCTION = "get_selected_data"
     CATEGORY = "📜Asset Gallery/Civitai"
 
-    def get_selected_data(self, unique_id, civitai_gallery_unique_id_widget=""):
-        gallery_id = civitai_gallery_unique_id_widget
-        node_id_str = str(unique_id)
-        node_key = f"{gallery_id}_{node_id_str}"
-        selections = load_selections()
-        node_selection = selections.get(node_key, {})
+    def get_selected_data(self, unique_id, civitai_gallery_unique_id_widget="", selection_data="{}"):
+        try:
+            node_selection = json.loads(selection_data)
+        except:
+            node_selection = {}
         item_data = node_selection.get("item", {})
         should_download = node_selection.get("download_image", False)
         meta = item_data.get("meta", {}) if item_data else {}
@@ -122,35 +114,6 @@ class CivitaiGalleryNode:
         return (pos_prompt, neg_prompt, tensor, info_string,)
 
 prompt_server = server.PromptServer.instance
-
-@prompt_server.routes.post("/civitai_gallery/set_prompts")
-async def set_civitai_prompts(request):
-    try:
-        data = await request.json()
-        node_id = str(data.get("node_id"))
-        gallery_id = data.get("gallery_id")
-        if not node_id or not gallery_id:
-            return web.json_response({"status": "error", "message": "Missing node_id or gallery_id"}, status=400)
-        node_key = f"{gallery_id}_{node_id}"
-        selections = load_selections()
-        selections[node_key] = { "item": data.get("item"), "download_image": data.get("download_image") }
-        save_selections(selections)
-        return web.json_response({"status": "ok", "message": "Selection saved"})
-    except Exception as e:
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
-
-@prompt_server.routes.get("/civitai_gallery/get_selection")
-async def get_civitai_selection(request):
-    try:
-        node_id = request.query.get('node_id')
-        gallery_id = request.query.get('gallery_id')
-        if not node_id or not gallery_id:
-            return web.json_response({})
-        node_key = f"{gallery_id}_{node_id}"
-        selections = load_selections()
-        return web.json_response(selections.get(node_key, {}))
-    except Exception as e:
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 @prompt_server.routes.get("/civitai_gallery/images")
 async def get_civitai_images(request):

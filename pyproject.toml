@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI_Civitai_Gallery"
 description = "ComfyUI Civitai Gallery is a powerful custom node for ComfyUI that integrates a seamless image and models browser for the Civitai website directly into your workflow."
-version = "1.0.3"
+version = "1.0.4"
 license = {file = "LICENSE"} 
 # classifiers = [
 #     # For OS-independent nodes (works on all operating systems)

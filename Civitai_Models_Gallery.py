@@ -10,7 +10,6 @@ import dateutil.parser
 
 from .Civitai_Gallery import (
     load_config, save_config,
-    load_selections, save_selections,
     get_full_filename_list
 )
 
@@ -42,10 +41,8 @@ def save_models_ui_state(data):
 
 class CivitaiModelsGalleryNode:
     @classmethod
-    def IS_CHANGED(cls, **kwargs):
-        if os.path.exists(os.path.join(os.path.dirname(__file__), "models_selections.json")):
-            return os.path.getmtime(os.path.join(os.path.dirname(__file__), "models_selections.json"))
-        return float("inf")
+    def IS_CHANGED(cls, selection_data, **kwargs):
+        return selection_data
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -53,6 +50,7 @@ class CivitaiModelsGalleryNode:
             "required": {},
             "hidden": {
                 "unique_id": "UNIQUE_ID",
+                "selection_data": ("STRING", {"default": "{}", "multiline": True, "forceInput": True}),
                 "civitai_models_gallery_unique_id_widget": ("STRING", {"default": "", "multiline": False}),
             },
         }
@@ -62,18 +60,12 @@ class CivitaiModelsGalleryNode:
     FUNCTION = "get_selected_model_data"
     CATEGORY = "📜Asset Gallery/Civitai"
 
-    def get_selected_model_data(self, unique_id, civitai_models_gallery_unique_id_widget=""):
-        gallery_id = civitai_models_gallery_unique_id_widget
-        node_id_str = str(unique_id)
-        node_key = f"{gallery_id}_{node_id_str}"
+    def get_selected_model_data(self, unique_id, civitai_models_gallery_unique_id_widget="", selection_data="{}"):
+        try:
+            node_selection = json.loads(selection_data)
+        except:
+            node_selection = {}
 
-        selections_file = os.path.join(os.path.dirname(__file__), "models_selections.json")
-        selections = {}
-        if os.path.exists(selections_file):
-            with open(selections_file, 'r', encoding='utf-8') as f:
-                selections = json.load(f)
-        
-        node_selection = selections.get(node_key, {})
         item_data = node_selection.get("item", {})
         
         info_string = json.dumps(item_data, indent=4, ensure_ascii=False)
@@ -111,50 +103,6 @@ async def get_civitai_models_ui_state(request):
         node_key = f"{gallery_id}_{node_id}"
         ui_states = load_models_ui_state()
         return web.json_response(ui_states.get(node_key, {}))
-    except Exception as e:
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
-
-@prompt_server.routes.post("/civitai_models_gallery/set_selection")
-async def set_civitai_models_selection(request):
-    try:
-        data = await request.json()
-        node_id = str(data.get("node_id"))
-        gallery_id = data.get("gallery_id")
-        if not node_id or not gallery_id:
-            return web.json_response({"status": "error", "message": "Missing node_id or gallery_id"}, status=400)
-        
-        node_key = f"{gallery_id}_{node_id}"
-        selections_file = os.path.join(os.path.dirname(__file__), "models_selections.json")
-        selections = {}
-        if os.path.exists(selections_file):
-            with open(selections_file, 'r', encoding='utf-8') as f:
-                selections = json.load(f)
-
-        selections[node_key] = {"item": data.get("item")}
-        
-        with open(selections_file, 'w', encoding='utf-8') as f:
-            json.dump(selections, f, indent=4, ensure_ascii=False)
-
-        return web.json_response({"status": "ok", "message": "Model selection saved"})
-    except Exception as e:
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
-
-@prompt_server.routes.get("/civitai_models_gallery/get_selection")
-async def get_civitai_models_selection(request):
-    try:
-        node_id = request.query.get('node_id')
-        gallery_id = request.query.get('gallery_id')
-        if not node_id or not gallery_id:
-            return web.json_response({})
-            
-        node_key = f"{gallery_id}_{node_id}"
-        selections_file = os.path.join(os.path.dirname(__file__), "models_selections.json")
-        selections = {}
-        if os.path.exists(selections_file):
-            with open(selections_file, 'r', encoding='utf-8') as f:
-                selections = json.load(f)
-        
-        return web.json_response(selections.get(node_key, {}))
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
