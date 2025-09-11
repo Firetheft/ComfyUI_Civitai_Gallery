@@ -5,6 +5,9 @@
 
 </div>
 
+### Changelog (2025-09-11)
+* **Edit Prompt**: A new “Edit Prompt” checkbox has been added to the Civitai Images Gallery. When enabled, it allows users to edit the prompt associated with each image, making it easier to quickly refine or remix prompts in real time. This feature also supports completing and saving prompts for images with missing or incomplete metadata. Additionally, image loading in the Favorites library has been optimized for better performance.
+
 ### Changelog (2025-09-07)
 * **🎬 Video Preview Support**: The Civitai Images Gallery now supports video browsing. You can toggle the “Show Video” checkbox to control whether video cards are displayed. To prevent potential crashes caused by autoplay in the ComfyUI interface, look for a play icon (▶️) in the top-right corner of each gallery card. If the icon is present, you can hover to preview the video or double-click the card (or click the play icon) to watch it in its original resolution.
 
@@ -72,6 +75,9 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
 4.  Restart ComfyUI.
 
 -----
+### 更新日志 (2025-09-11)
+* **提示词编辑**：在“Civitai Images Gallery”中增加了一个“Edit Prompt"的复选框，勾选后开启对图片提示词的编辑能力，方便实时快速的对提示词进行二次创作，对提示词残缺的图片可以进行提示词补充保存等。顺便优化了收藏库图片的加载。
+
 ### 更新日志 (2025-09-07)
 * **🎬 视频预览支持**：Civitai 图片库现已支持视频浏览。您可以勾选“显示视频”复选框来控制是否显示视频卡。为防止 ComfyUI 界面中自动播放可能导致的崩溃，请在每个图库卡片的右上角找到播放图标 (▶️)。如果出现该图标，您可以将鼠标悬停在卡片上预览视频，或者双击卡片（或点击播放图标）以原始分辨率观看。
 

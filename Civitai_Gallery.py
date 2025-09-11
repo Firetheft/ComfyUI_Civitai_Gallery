@@ -201,10 +201,10 @@ async def get_civitai_ui_state(request):
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
-@prompt_server.routes.get("/civitai_gallery/get_favorites_list")
-async def get_favorites_list(request):
+@prompt_server.routes.get("/civitai_gallery/get_all_favorites_data")
+async def get_all_favorites_data(request):
     favorites = load_favorites()
-    return web.json_response(list(favorites.keys()))
+    return web.json_response(favorites)
 
 @prompt_server.routes.post("/civitai_gallery/toggle_favorite")
 async def toggle_favorite(request):
@@ -219,7 +219,11 @@ async def toggle_favorite(request):
             del favorites[item_id]
             status = "removed"
         else:
-            item['tags'] = []
+            if 'meta' not in item or item['meta'] is None:
+                item['meta'] = {}
+            if 'tags' not in item:
+                item['tags'] = []
+            item['meta'].pop('prompt_saved', None)
             favorites[item_id] = item
             status = "added"
         save_favorites(favorites)
@@ -227,30 +231,69 @@ async def toggle_favorite(request):
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+@prompt_server.routes.post("/civitai_gallery/add_or_update_favorite")
+async def add_or_update_favorite(request):
+    try:
+        data = await request.json()
+        item = data.get("item")
+        if not item or 'id' not in item:
+            return web.json_response({"status": "error", "message": "Invalid item data"}, status=400)
+        
+        item_id = str(item['id'])
+        favorites = load_favorites()
+        favorites[item_id] = item
+        save_favorites(favorites)
+        
+        return web.json_response({"status": "success", "message": "Favorite updated successfully."})
+    except Exception as e:
+        return web.json_response({"status": "error", "message": str(e)}, status=500)
+
 @prompt_server.routes.get("/civitai_gallery/get_favorites_images")
 async def get_favorites_images(request):
-    favorites = load_favorites()
-    items = list(favorites.values())
-    
-    filter_tags_str = request.query.get('fav_tags', '').strip().lower()
-    filter_mode = request.query.get('fav_tag_mode', 'OR').upper()
-
-    if filter_tags_str:
-        filter_tags = {tag.strip() for tag in filter_tags_str.split(',') if tag.strip()}
+    try:
+        page = int(request.query.get('page', '1'))
+        limit = int(request.query.get('limit', '50'))
         
-        filtered_items = []
-        for item in items:
-            item_tags = {str(t).lower() for t in item.get('tags', [])}
-            if filter_mode == 'AND':
-                if filter_tags.issubset(item_tags):
-                    filtered_items.append(item)
-            else:
-                if any(ft in item_tags for ft in filter_tags):
-                    filtered_items.append(item)
-        items = filtered_items
+        favorites = load_favorites()
+        items = list(favorites.values())
+        
+        filter_tags_str = request.query.get('fav_tags', '').strip().lower()
+        filter_mode = request.query.get('fav_tag_mode', 'OR').upper()
 
-    response_data = { "items": items, "metadata": {} }
-    return web.json_response(response_data)
+        if filter_tags_str:
+            filter_tags = {tag.strip() for tag in filter_tags_str.split(',') if tag.strip()}
+            
+            filtered_items = []
+            for item in items:
+                item_tags = {str(t).lower() for t in item.get('tags', [])}
+                if filter_mode == 'AND':
+                    if filter_tags.issubset(item_tags):
+                        filtered_items.append(item)
+                else:
+                    if any(ft in item_tags for ft in filter_tags):
+                        filtered_items.append(item)
+            items = filtered_items
+
+        total_items = len(items)
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        
+        paginated_items = items[start_index:end_index]
+        
+        response_data = { 
+            "items": paginated_items, 
+            "metadata": {
+                "totalItems": total_items,
+                "currentPage": page,
+                "pageSize": limit,
+                "totalPages": (total_items + limit - 1) // limit
+            }
+        }
+        
+        return web.json_response(response_data)
+    except Exception as e:
+        print(f"CivitaiGallery: get_favorites_images error: {e}")
+        return web.json_response({"error": str(e)}, status=500)
 
 @prompt_server.routes.post("/civitai_gallery/download_model")
 async def download_model(request):

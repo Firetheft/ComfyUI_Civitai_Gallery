@@ -208,6 +208,9 @@ async def toggle_model_favorite(request):
 @prompt_server.routes.get("/civitai_models_gallery/get_favorites_models")
 async def get_favorites_models(request):
     try:
+        page = int(request.query.get('page', '1'))
+        limit = int(request.query.get('limit', '50'))
+
         favorites = load_models_favorites()
         items = list(favorites.values())
 
@@ -219,14 +222,11 @@ async def get_favorites_models(request):
 
         filtered_items = []
         for item in items:
-
             if types and item.get('type') != types:
                 continue
-
             if base_models:
                 if not any(v.get('baseModel') == base_models for v in item.get('modelVersions', [])):
                     continue
-
             if query:
                 matches_query = False
                 if query in item.get('name', '').lower():
@@ -237,28 +237,23 @@ async def get_favorites_models(request):
                     matches_query = True
                 if not matches_query:
                     continue
-
             if period != 'AllTime':
                 if not item.get('modelVersions'):
                     continue
-
                 try:
                     published_at_str = item['modelVersions'][0].get('publishedAt')
                     if not published_at_str:
                         continue
                     published_date = dateutil.parser.isoparse(published_at_str)
                     now = datetime.now(published_date.tzinfo)
-
                     delta = now - published_date
                     if period == 'Day' and delta > timedelta(days=1): continue
                     if period == 'Week' and delta > timedelta(weeks=1): continue
                     if period == 'Month' and delta > timedelta(days=30): continue
                     if period == 'Year' and delta > timedelta(days=365): continue
-
                 except Exception as e:
                     print(f"CivitaiModelsGallery: 解析日期时出错: {e}")
                     continue
-
             filtered_items.append(item)
 
         if sort == 'Highest Rated':
@@ -268,7 +263,22 @@ async def get_favorites_models(request):
         elif sort == 'Newest':
             filtered_items.sort(key=lambda x: dateutil.parser.isoparse(x['modelVersions'][0]['publishedAt']) if x.get('modelVersions') and x['modelVersions'][0].get('publishedAt') else datetime.min.replace(tzinfo=dateutil.tz.UTC), reverse=True)
 
-        response_data = { "items": filtered_items, "metadata": {} }
+        total_items = len(filtered_items)
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+
+        paginated_items = filtered_items[start_index:end_index]
+
+        response_data = {
+            "items": paginated_items,
+            "metadata": {
+                "totalItems": total_items,
+                "currentPage": page,
+                "pageSize": limit,
+                "totalPages": (total_items + limit - 1) // limit
+            }
+        }
+
         return web.json_response(response_data)
     except Exception as e:
         print(f"CivitaiModelsGallery: get_favorites_models 出错: {e}")
