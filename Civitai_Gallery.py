@@ -307,11 +307,14 @@ async def download_model(request):
         data = await request.json()
         model_version_id = data.get("version_id")
         model_type = data.get("type", "").lower()
+        international_version = data.get("international_version", False)
 
         if not model_version_id:
             return web.json_response({"status": "error", "message": "Missing model_version_id"}, status=400)
 
-        version_info_url = f"https://civitai.com/api/v1/model-versions/{model_version_id}"
+        base_domain = "civitai.com" if international_version else "civitai.work"
+        version_info_url = f"https://{base_domain}/api/v1/model-versions/{model_version_id}"
+
         async with aiohttp.ClientSession() as session:
             async with session.get(version_info_url, headers=headers) as response:
                 if response.status != 200:
@@ -405,6 +408,7 @@ async def get_resource_info(request):
     try:
         data = await request.json()
         resources = data.get("resources", [])
+        international_version = data.get("international_version", False)
 
         type_mapping = {
             "checkpoint": "checkpoints", "lora": "loras", "locon": "loras", "dora": "loras",
@@ -414,12 +418,14 @@ async def get_resource_info(request):
         }
         custom_folder_types = ["workflows", "wildcards", "poses", "detection"]
 
+        base_domain = "civitai.com" if international_version else "civitai.work"
+
         async def fetch_info(session, resource):
             version_id = resource.get("modelVersionId")
             if version_id:
-                url = f"https://civitai.com/api/v1/model-versions/{version_id}"
+                url = f"https://{base_domain}/api/v1/model-versions/{version_id}"
             elif resource.get("hash"):
-                url = f"https://civitai.com/api/v1/model-versions/by-hash/{resource.get('hash')}"
+                url = f"https://{base_domain}/api/v1/model-versions/by-hash/{resource.get('hash')}"
             else:
                 return resource
 
