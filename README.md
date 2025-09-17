@@ -5,6 +5,9 @@
 
 </div>
 
+### Changelog (2025-09-17)
+* **Video Workflow Loading**: Now you can load the video workflow. However, it should be noted that due to API limitations, I can only determine whether a workflow exists by extracting and analyzing a short segment of the video. Therefore, the recognition speed is not as fast as that of the image workflow.
+
 ### Changelog (2025-09-11)
 * **Edit Prompt**: A new “Edit Prompt” checkbox has been added to the Civitai Images Gallery. When enabled, it allows users to edit the prompt associated with each image, making it easier to quickly refine or remix prompts in real time. This feature also supports completing and saving prompts for images with missing or incomplete metadata. Additionally, image loading in the Favorites library has been optimized for better performance.
 
@@ -75,6 +78,9 @@ The gallery features a fluid, responsive waterfall (masonry) layout that intelli
 4.  Restart ComfyUI.
 
 -----
+### 更新日志 (2025-09-17)
+* **加载视频工作流**：现在您可以加载视频工作流程。但请注意，由于API的限制，我只能通过提取并分析视频中的一段片段来判断是否存在相应的工作流程。因此，视频识别速度可能不如图像识别那样快。
+
 ### 更新日志 (2025-09-11)
 * **提示词编辑**：在“Civitai Images Gallery”中增加了一个“Edit Prompt"的复选框，勾选后开启对图片提示词的编辑能力，方便实时快速的对提示词进行二次创作，对提示词残缺的图片可以进行提示词补充保存等。顺便优化了收藏库图片的加载。
 

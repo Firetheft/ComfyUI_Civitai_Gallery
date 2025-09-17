@@ -566,5 +566,49 @@ async def cancel_download(request):
     except Exception as e:
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
+@prompt_server.routes.post("/civitai_gallery/check_video_workflow")
+async def check_video_workflow(request):
+    data = await request.json()
+    video_url = data.get("url")
+    if not video_url:
+        return web.json_response({"has_workflow": False, "error": "URL is missing"}, status=400)
+
+    try:
+        headers = {'Range': 'bytes=0-4194304'} 
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_url, headers=headers) as response:
+                if response.status >= 400 and response.status != 416:
+                     return web.json_response({"has_workflow": False, "error": f"Failed to fetch video chunk, status: {response.status}"})
+                
+                chunk = await response.content.read()
+                has_workflow = b'"workflow":' in chunk or b'"prompt":' in chunk
+                
+                return web.json_response({"has_workflow": has_workflow})
+    except Exception as e:
+        return web.json_response({"has_workflow": False, "error": str(e)}, status=500)
+
+@prompt_server.routes.get("/civitai_gallery/get_video_for_workflow")
+async def get_video_for_workflow(request):
+    video_url = request.query.get('url')
+    if not video_url:
+        return web.Response(status=400, text="Missing video URL")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_url) as response:
+                if response.status != 200:
+                    return web.Response(status=response.status, text=f"Failed to fetch video from source: {response.reason}")
+                
+                data = await response.read()
+                filename = video_url.split('/')[-1].split('?')[0] or "video_with_workflow.mp4"
+
+                return web.Response(
+                    body=data,
+                    content_type=response.content_type,
+                    headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+                )
+    except Exception as e:
+        return web.Response(status=500, text=str(e))
+
 NODE_CLASS_MAPPINGS = { "CivitaiGalleryNode": CivitaiGalleryNode }
 NODE_DISPLAY_NAME_MAPPINGS = { "CivitaiGalleryNode": "Civitai Images Gallery" }
