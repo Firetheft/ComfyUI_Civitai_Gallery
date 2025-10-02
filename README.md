@@ -2,7 +2,7 @@
 <div align="center">
 
 # ComfyUI Civitai Gallery<br><sub><sup>-=SFW-Friendly=-</sup></sub>
-
+You are free to create your own entirely separate NSFW open-source project, but do not make any high-minded demands of me in this regard, as I will ignore them. I have not applied any open-source license to my work. It would be utterly shameless for you to simply add a few lines to my code to implement NSFW functionality, only to then condemn my adherence to SFW principles and protest a supposed lack of transparency in my code.
 </div>
 
 ### Changelog (2025-09-17)
