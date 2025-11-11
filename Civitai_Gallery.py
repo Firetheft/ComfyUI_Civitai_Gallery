@@ -93,10 +93,7 @@ class CivitaiGalleryNode:
         pos_prompt = meta.get("prompt", "") if meta else ""
         neg_prompt = meta.get("negativePrompt", "") if meta else ""
         image_url = item_data.get("url", "") if item_data else ""
-        info_dict = meta.copy() if meta else {}
-        info_dict.pop("prompt", None)
-        info_dict.pop("negativePrompt", None)
-        info_string = json.dumps(info_dict, indent=4, ensure_ascii=False)
+        info_string = json.dumps(item_data, indent=4, ensure_ascii=False)
         tensor = torch.zeros(1, 1, 1, 3)
         if should_download and image_url:
             print("CivitaiGalleryNode: Frontend reports image output is connected. Starting download.")
