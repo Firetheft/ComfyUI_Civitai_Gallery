@@ -158,15 +158,32 @@ async def get_civitai_images(request):
 
     if cursor:
         params['cursor'] = cursor
-        
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return web.json_response(data)
-    except aiohttp.ClientError as e:
-        return web.json_response({"error": str(e)}, status=500)
+
+    config = load_config()
+    api_key = config.get("civitai_api_key")
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    timeout = aiohttp.ClientTimeout(total=60)
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(api_url, params=params, headers=headers) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return web.json_response(data)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"CivitaiGallery: Failed to fetch images after {max_retries} attempts. Error: {e}")
+                return web.json_response({"error": str(e)}, status=500)
+            await asyncio.sleep(1)
+            print(f"CivitaiGallery: Connection failed, retrying ({attempt + 1}/{max_retries})...")
 
 @prompt_server.routes.post("/civitai_gallery/set_ui_state")
 async def set_civitai_ui_state(request):
@@ -300,7 +317,10 @@ async def download_model(request):
         if not api_key:
             return web.json_response({"status": "error", "message": "Civitai API Key not found.", "reason": "API_KEY_MISSING"}, status=401)
 
-        headers = { "Authorization": f"Bearer {api_key}" }
+        headers = { 
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+        }
         data = await request.json()
         model_version_id = data.get("version_id")
         model_type = data.get("type", "").lower()
@@ -359,38 +379,54 @@ async def download_model(request):
         task_id = f"download_{model_version_id}_{int(time.time())}"
 
         async def do_download():
+            temp_file_path = file_path + ".downloading"
             download_tasks[task_id] = {"progress": 0, "total_size": total_size, "status": "downloading", "cancel_requested": False}
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(download_url, headers=headers, timeout=None) as response:
-                        if response.status != 200:
-                            raise Exception(f"Download failed with status: {response.status}")
+            
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(download_url, headers=headers, timeout=None) as response:
+                            if response.status != 200:
+                                raise Exception(f"Download failed with status: {response.status}")
 
-                        with open(file_path, 'wb') as f:
-                            downloaded = 0
-                            while True:
-                                if download_tasks.get(task_id, {}).get("cancel_requested"):
-                                    raise Exception("Download cancelled by user.")
+                            with open(temp_file_path, 'wb') as f:
+                                downloaded = 0
+                                while True:
+                                    if download_tasks.get(task_id, {}).get("cancel_requested"):
+                                        raise Exception("Download cancelled by user.")
 
-                                chunk = await response.content.read(8192)
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                                download_tasks[task_id]["progress"] = downloaded
+                                    chunk = await response.content.read(65536)
+                                    if not chunk:
+                                        break
+                                    f.write(chunk)
+                                    downloaded += len(chunk)
+                                    download_tasks[task_id]["progress"] = downloaded
 
-                        download_tasks[task_id]["status"] = "completed"
-                        print(f"CivitaiGallery: Successfully downloaded '{filename}'")
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                            os.rename(temp_file_path, file_path)
 
-            except Exception as e:
-                print(f"CivitaiGallery: Error during download for task {task_id}: {e}")
-                if download_tasks.get(task_id):
-                    if "cancelled" in str(e).lower():
-                        download_tasks[task_id]["status"] = "cancelled"
+                            download_tasks[task_id]["status"] = "completed"
+                            print(f"CivitaiGallery: Successfully downloaded '{filename}'")
+                            break
+
+                except Exception as e:
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+
+                    is_cancelled = "cancelled" in str(e).lower()
+                    
+                    if is_cancelled or attempt == max_retries - 1:
+                        print(f"CivitaiGallery: Download failed or cancelled for task {task_id}: {e}")
+                        if download_tasks.get(task_id):
+                            if is_cancelled:
+                                download_tasks[task_id]["status"] = "cancelled"
+                            else:
+                                download_tasks[task_id]["status"] = "error"
                     else:
-                        download_tasks[task_id]["status"] = "error"
-                if os.path.exists(file_path):
-                    os.remove(file_path)
+                        print(f"CivitaiGallery: Download connection failed, retrying ({attempt + 1}/{max_retries})...")
+                        await asyncio.sleep(2)
 
         asyncio.create_task(do_download())
 

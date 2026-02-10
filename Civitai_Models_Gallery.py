@@ -114,15 +114,31 @@ async def get_civitai_models(request):
     international_version = params.pop('international_version', 'false').lower() in ['true', '1']
     base_domain = "civitai.com" if international_version else "civitai.work"
     api_url = f"https://{base_domain}/api/v1/models"
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return web.json_response(data)
-    except aiohttp.ClientError as e:
-        return web.json_response({"error": str(e)}, status=500)
+    config = load_config()
+    api_key = config.get("civitai_api_key")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    timeout = aiohttp.ClientTimeout(total=60)
+
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(api_url, params=params, headers=headers) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    return web.json_response(data)
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"CivitaiModelsGallery: Failed to fetch models after {max_retries} attempts. Error: {e}")
+                return web.json_response({"error": str(e)}, status=500)
+            await asyncio.sleep(1)
+            print(f"CivitaiModelsGallery: Connection failed, retrying ({attempt + 1}/{max_retries})...")
 
 @prompt_server.routes.post("/civitai_models_gallery/check_files_exist")
 async def check_files_exist(request):
