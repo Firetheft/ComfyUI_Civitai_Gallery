@@ -7,6 +7,13 @@ import { app } from "/scripts/app.js";
 // the requests those bundles already make to this node pack's own
 // backend routes (/civitai_gallery/*, /civitai_models_gallery/*).
 
+// civitai_gallery.js references a bare `checkOnLayout` global that it never
+// declares, throwing a ReferenceError inside its image-load handler and
+// aborting rendering before any images get shown. Defining it here (as a
+// global, before that handler ever runs) resolves the lookup without
+// touching the minified bundle.
+if (typeof window.checkOnLayout === "undefined") window.checkOnLayout = false;
+
 const STORAGE_KEY = "civitai_gallery_extras_v1";
 const DOMAIN_OPTIONS = ["civitai.red", "civitai.com"];
 
