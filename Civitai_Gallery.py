@@ -52,12 +52,12 @@ def save_favorites(data):
         with open(FAVORITES_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"CivitaiGallery: Error saving favorites: {e}")
 
-ALLOWED_CIVITAI_DOMAINS = {"civitai.com", "civitai.work", "civitai.red"}
+ALLOWED_CIVITAI_DOMAINS = {"civitai.com", "civitai.red"}
 
-def resolve_domain(domain, international_version):
+def resolve_domain(domain, international_version=False):
     if domain in ALLOWED_CIVITAI_DOMAINS:
         return domain
-    return "civitai.com" if international_version else "civitai.work"
+    return "civitai.red"
 
 def get_full_filename_list(folder_key):
     file_list = []

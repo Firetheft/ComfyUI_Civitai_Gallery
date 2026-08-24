@@ -8,7 +8,7 @@ import { app } from "/scripts/app.js";
 // backend routes (/civitai_gallery/*, /civitai_models_gallery/*).
 
 const STORAGE_KEY = "civitai_gallery_extras_v1";
-const DOMAIN_OPTIONS = ["civitai.work", "civitai.com", "civitai.red"];
+const DOMAIN_OPTIONS = ["civitai.red", "civitai.com"];
 
 function loadPrefs() {
     let stored = {};
@@ -17,7 +17,9 @@ function loadPrefs() {
     } catch (e) {
         stored = {};
     }
-    return Object.assign({ domain: "civitai.work", baseModel: "" }, stored);
+    const prefs = Object.assign({ domain: "civitai.red", baseModel: "" }, stored);
+    if (!DOMAIN_OPTIONS.includes(prefs.domain)) prefs.domain = "civitai.red";
+    return prefs;
 }
 
 function savePrefs(prefs) {
