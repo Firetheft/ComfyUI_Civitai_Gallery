@@ -40,6 +40,12 @@ function thumbUrl(url, width) {
     return url;
 }
 
+function extractModelId(value) {
+    if (!value) return null;
+    const m = value.match(/models\/(\d+)/) || value.match(/^\s*(\d+)\s*$/);
+    return m ? m[1] : null;
+}
+
 function isImageOutputConnected(node) {
     const out = node.outputs && node.outputs[2];
     return !!(out && out.links && out.links.length > 0);
@@ -90,11 +96,12 @@ function setupCivitaiGallery(node) {
     periodSelect.value = "Month";
 
     const usernameInput = el("input", { ...selectStyle, flex: "1", minWidth: "70px" }, { type: "text", placeholder: "Username" });
+    const modelInput = el("input", { ...selectStyle, flex: "1", minWidth: "70px" }, { type: "text", placeholder: "Model ID 或 civitai.com/models/12345" });
 
     const refreshBtn = el("button", { ...selectStyle, cursor: "pointer" }, { textContent: "🔄 Refresh" });
 
     filterRow1.append(nsfwSelect, sortSelect, periodSelect, refreshBtn);
-    filterRow2.append(usernameInput);
+    filterRow2.append(usernameInput, modelInput);
 
     const statusEl = el("div", { opacity: "0.7", minHeight: "14px" });
 
@@ -127,7 +134,12 @@ function setupCivitaiGallery(node) {
             period: periodSelect.value,
             domain: "civitai.red",
         });
-        if (usernameInput.value.trim()) p.set("username", usernameInput.value.trim());
+        const modelId = extractModelId(modelInput.value);
+        if (modelId) {
+            p.set("modelId", modelId);
+        } else if (usernameInput.value.trim()) {
+            p.set("username", usernameInput.value.trim());
+        }
         if (cursor) p.set("cursor", cursor);
         return p;
     }
@@ -237,6 +249,7 @@ function setupCivitaiGallery(node) {
     loadMoreBtn.addEventListener("click", () => loadImages(false));
     [nsfwSelect, sortSelect, periodSelect].forEach((e) => e.addEventListener("change", () => loadImages(true)));
     usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadImages(true); });
+    modelInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadImages(true); });
 
     loadImages(true);
 }
