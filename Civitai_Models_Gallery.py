@@ -10,7 +10,7 @@ import dateutil.parser
 
 from .Civitai_Gallery import (
     load_config, save_config,
-    get_full_filename_list
+    get_full_filename_list, resolve_domain
 )
 
 MODELS_UI_STATE_FILE = os.path.join(os.path.dirname(__file__), "civitai_models_ui_state.json")
@@ -112,7 +112,8 @@ async def get_civitai_models(request):
     params.setdefault('limit', '50')
     
     international_version = params.pop('international_version', 'false').lower() in ['true', '1']
-    base_domain = "civitai.com" if international_version else "civitai.work"
+    domain = params.pop('domain', '')
+    base_domain = resolve_domain(domain, international_version)
     api_url = f"https://{base_domain}/api/v1/models"
     config = load_config()
     api_key = config.get("civitai_api_key")
