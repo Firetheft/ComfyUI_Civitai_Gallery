@@ -52,6 +52,13 @@ def save_favorites(data):
         with open(FAVORITES_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"CivitaiGallery: Error saving favorites: {e}")
 
+ALLOWED_CIVITAI_DOMAINS = {"civitai.com", "civitai.work", "civitai.red"}
+
+def resolve_domain(domain, international_version):
+    if domain in ALLOWED_CIVITAI_DOMAINS:
+        return domain
+    return "civitai.com" if international_version else "civitai.work"
+
 def get_full_filename_list(folder_key):
     file_list = []
     for folder_path in folder_paths.get_folder_paths(folder_key):
@@ -119,12 +126,13 @@ async def get_civitai_images(request):
     period = request.query.get('period', 'Day')
     username = request.query.get('username', '')
     international_version = request.query.get('international_version', 'false').lower() in ['true', '1']
+    domain = request.query.get('domain', '')
     cursor = request.query.get('cursor', None)
     tags_query = request.query.get('tags', None)
     model_id = request.query.get('modelId', None)
     model_version_id = request.query.get('modelVersionId', None)
     
-    base_domain = "civitai.com" if international_version else "civitai.work"
+    base_domain = resolve_domain(domain, international_version)
     api_url = f"https://{base_domain}/api/v1/images"
     
     params = {}
@@ -325,11 +333,12 @@ async def download_model(request):
         model_version_id = data.get("version_id")
         model_type = data.get("type", "").lower()
         international_version = data.get("international_version", False)
+        domain = data.get("domain", "")
 
         if not model_version_id:
             return web.json_response({"status": "error", "message": "Missing model_version_id"}, status=400)
 
-        base_domain = "civitai.com" if international_version else "civitai.work"
+        base_domain = resolve_domain(domain, international_version)
         version_info_url = f"https://{base_domain}/api/v1/model-versions/{model_version_id}"
 
         async with aiohttp.ClientSession() as session:
@@ -442,6 +451,7 @@ async def get_resource_info(request):
         data = await request.json()
         resources = data.get("resources", [])
         international_version = data.get("international_version", False)
+        domain = data.get("domain", "")
 
         type_mapping = {
             "checkpoint": "checkpoints", "lora": "loras", "locon": "loras", "dora": "loras",
@@ -451,7 +461,7 @@ async def get_resource_info(request):
         }
         custom_folder_types = ["workflows", "wildcards", "poses", "detection"]
 
-        base_domain = "civitai.com" if international_version else "civitai.work"
+        base_domain = resolve_domain(domain, international_version)
 
         async def fetch_info(session, resource):
             version_id = resource.get("modelVersionId")
@@ -518,6 +528,11 @@ async def get_resource_info(request):
 
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
+
+@prompt_server.routes.get("/civitai_gallery/api_key_status")
+async def get_api_key_status(request):
+    config = load_config()
+    return web.json_response({"has_key": bool(config.get("civitai_api_key"))})
 
 @prompt_server.routes.post("/civitai_gallery/save_api_key")
 async def save_api_key(request):
