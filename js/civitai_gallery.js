@@ -90,18 +90,18 @@ function setupCivitaiGallery(node) {
     periodSelect.value = "Month";
 
     const usernameInput = el("input", { ...selectStyle, flex: "1", minWidth: "70px" }, { type: "text", placeholder: "Username" });
-    const tagsInput = el("input", { ...selectStyle, flex: "1", minWidth: "70px" }, { type: "text", placeholder: "Tags (comma separated)" });
 
     const refreshBtn = el("button", { ...selectStyle, cursor: "pointer" }, { textContent: "🔄 Refresh" });
 
     filterRow1.append(nsfwSelect, sortSelect, periodSelect, refreshBtn);
-    filterRow2.append(usernameInput, tagsInput);
+    filterRow2.append(usernameInput);
 
     const statusEl = el("div", { opacity: "0.7", minHeight: "14px" });
 
+    const THUMB_SIZE = 90;
     const gridEl = el("div", {
-        display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))",
-        gap: "4px", overflowY: "auto", flex: "1 1 auto", minHeight: "120px",
+        display: "flex", flexWrap: "wrap", alignContent: "flex-start",
+        gap: "4px", overflowY: "auto", overflowX: "hidden", flex: "1 1 0", minHeight: "0",
         border: "1px solid #444", borderRadius: "4px", padding: "4px", background: "#161616",
     });
 
@@ -128,7 +128,6 @@ function setupCivitaiGallery(node) {
             domain: "civitai.red",
         });
         if (usernameInput.value.trim()) p.set("username", usernameInput.value.trim());
-        if (tagsInput.value.trim()) p.set("tags", tagsInput.value.trim());
         if (cursor) p.set("cursor", cursor);
         return p;
     }
@@ -164,7 +163,8 @@ function setupCivitaiGallery(node) {
 
     function buildThumb(item) {
         const wrap = el("div", {
-            position: "relative", aspectRatio: "1 / 1", overflow: "hidden", borderRadius: "3px",
+            position: "relative", width: `${THUMB_SIZE}px`, height: `${THUMB_SIZE}px`, flex: "0 0 auto",
+            overflow: "hidden", borderRadius: "3px",
             cursor: "pointer", border: "2px solid transparent", background: "#111",
         });
         const img = el("img", { width: "100%", height: "100%", objectFit: "cover", display: "block" });
@@ -209,13 +209,6 @@ function setupCivitaiGallery(node) {
         detailEl.style.display = "flex";
         const meta = item.meta || {};
 
-        const preview = el("img", {
-            maxWidth: "100%", maxHeight: "180px", objectFit: "contain",
-            alignSelf: "center", borderRadius: "3px",
-        });
-        preview.src = thumbUrl(item.url, 700);
-        detailEl.appendChild(preview);
-
         detailEl.appendChild(el("div", { opacity: "0.75" }, {
             textContent: `👤 ${item.username || "?"}  |  ${item.width || "?"}x${item.height || "?"}  |  ${item.baseModel || ""}`,
         }));
@@ -244,7 +237,6 @@ function setupCivitaiGallery(node) {
     loadMoreBtn.addEventListener("click", () => loadImages(false));
     [nsfwSelect, sortSelect, periodSelect].forEach((e) => e.addEventListener("change", () => loadImages(true)));
     usernameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadImages(true); });
-    tagsInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadImages(true); });
 
     loadImages(true);
 }
