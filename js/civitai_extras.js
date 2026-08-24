@@ -1,18 +1,11 @@
 import { app } from "/scripts/app.js";
 
-// Additive extension: adds civitai.red domain support, an API key input,
-// and a Base Model filter for the Models Gallery, WITHOUT touching the
-// existing civitai_gallery.js / civitai_models_gallery.js bundles.
-// It works by patching window.fetch to inject the chosen options into
-// the requests those bundles already make to this node pack's own
-// backend routes (/civitai_gallery/*, /civitai_models_gallery/*).
-
-// civitai_gallery.js references a bare `checkOnLayout` global that it never
-// declares, throwing a ReferenceError inside its image-load handler and
-// aborting rendering before any images get shown. Defining it here (as a
-// global, before that handler ever runs) resolves the lookup without
-// touching the minified bundle.
-if (typeof window.checkOnLayout === "undefined") window.checkOnLayout = false;
+// Additive extension: adds a domain switcher, an API key input, and a Base
+// Model filter for the Models Gallery, WITHOUT touching the
+// civitai_models_gallery.js bundle. It works by patching window.fetch to
+// inject the chosen options into the requests that bundle (and the images
+// gallery) already make to this node pack's own backend routes
+// (/civitai_gallery/*, /civitai_models_gallery/*).
 
 const STORAGE_KEY = "civitai_gallery_extras_v1";
 const DOMAIN_OPTIONS = ["civitai.red", "civitai.com"];
