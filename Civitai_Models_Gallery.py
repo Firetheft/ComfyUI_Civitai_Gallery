@@ -38,6 +38,13 @@ def save_models_ui_state(data):
         with open(MODELS_UI_STATE_FILE, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e: print(f"CivitaiModelsGallery: Error saving UI state: {e}")
 
+ALLOWED_CIVITAI_DOMAINS = {"civitai.com", "civitai.red"}
+
+def resolve_domain(domain=None, international_version=False):
+    if domain in ALLOWED_CIVITAI_DOMAINS:
+        return domain
+    return "civitai.red"
+
 
 class CivitaiModelsGalleryNode:
     @classmethod
@@ -112,7 +119,8 @@ async def get_civitai_models(request):
     params.setdefault('limit', '50')
     
     international_version = params.pop('international_version', 'false').lower() in ['true', '1']
-    base_domain = "civitai.com" if international_version else "civitai.work"
+    domain = params.pop('domain', None)
+    base_domain = resolve_domain(domain, international_version)
     api_url = f"https://{base_domain}/api/v1/models"
     config = load_config()
     api_key = config.get("civitai_api_key")
@@ -272,12 +280,20 @@ async def get_favorites_models(request):
                     continue
             filtered_items.append(item)
 
-        if sort == 'Highest Rated':
-            filtered_items.sort(key=lambda x: x.get('stats', {}).get('rating', 0), reverse=True)
+        if sort in ('Highest Rated', 'Most Liked'):
+            filtered_items.sort(key=lambda x: x.get('stats', {}).get('thumbsUpCount', 0) or x.get('stats', {}).get('rating', 0), reverse=True)
         elif sort == 'Most Downloaded':
             filtered_items.sort(key=lambda x: x.get('stats', {}).get('downloadCount', 0), reverse=True)
+        elif sort == 'Most Discussed':
+            filtered_items.sort(key=lambda x: x.get('stats', {}).get('commentCount', 0), reverse=True)
+        elif sort == 'Most Collected':
+            filtered_items.sort(key=lambda x: x.get('stats', {}).get('favoriteCount', 0) or x.get('stats', {}).get('tippedAmountCount', 0), reverse=True)
+        elif sort == 'Most Images':
+            filtered_items.sort(key=lambda x: len(x.get('modelVersions', [{}])[0].get('images', [])) if x.get('modelVersions') else 0, reverse=True)
         elif sort == 'Newest':
             filtered_items.sort(key=lambda x: dateutil.parser.isoparse(x['modelVersions'][0]['publishedAt']) if x.get('modelVersions') and x['modelVersions'][0].get('publishedAt') else datetime.min.replace(tzinfo=dateutil.tz.UTC), reverse=True)
+        elif sort == 'Oldest':
+            filtered_items.sort(key=lambda x: dateutil.parser.isoparse(x['modelVersions'][0]['publishedAt']) if x.get('modelVersions') and x['modelVersions'][0].get('publishedAt') else datetime.max.replace(tzinfo=dateutil.tz.UTC), reverse=False)
 
         total_items = len(filtered_items)
         start_index = (page - 1) * limit
